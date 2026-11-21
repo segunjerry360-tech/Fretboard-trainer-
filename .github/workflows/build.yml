@@ -28,19 +28,27 @@ jobs:
 
       - name: Prepare web app
         run: |
-          mkdir -p www
+          test -f index.html
+          test -f icon.png
+          mkdir -p www assets
           cp index.html www/index.html
+          cp icon.png assets/icon.png
 
       - name: Add Android platform
         run: npx cap add android
 
-      - name: Prepare app icon
-        run: |
-          mkdir -p assets
-          cp icon.png assets/icon.png
+      - name: Remove default Capacitor launcher icons
+        run: rm -rf android/app/src/main/res/mipmap-*
 
-      - name: Generate Android launcher icons
-        run: npx capacitor-assets generate --android
+      - name: Generate custom Android launcher icons
+        run: npx capacitor-assets generate --android --iconBackgroundColor '#171a22' --iconBackgroundColorDark '#171a22'
+
+      - name: Verify custom launcher icons were generated
+        run: |
+          echo 'Generated launcher icon files:'
+          find android/app/src/main/res -type f -path '*/mipmap-*/*' -print
+          test -f android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+          test -f android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
 
       - name: Sync Capacitor
         run: npx cap sync android
@@ -49,7 +57,7 @@ jobs:
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug
+          ./gradlew clean assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
@@ -57,4 +65,3 @@ jobs:
           name: Fretboard-Trainer-debug-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
-          
