@@ -1,0 +1,14 @@
+{
+  "name": "fretboard-trainer",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Fretboard Trainer Android app",
+  "dependencies": {
+    "@capacitor/android": "6.2.1",
+    "@capacitor/core": "6.2.1"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "6.2.1",
+    "@capacitor/assets": "3.0.5"
+  }
+}

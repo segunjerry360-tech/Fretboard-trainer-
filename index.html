@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Fretboard Trainer</title>
+<style>
+:root{--bg:#f3f3ef;--fg:#1a1a1a;--mut:#6b6b66;--card:#fff;--line:#cfcfc8;--ok:#1f8a4c;--bad:#c9372c;--slow:#c98a00;--acc:#1d4ed8;--acc2:#7c3aed;--wood:#e9e2d3;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#15161a;--fg:#ececea;--mut:#9a9a94;--card:#202228;--line:#3a3d46;--ok:#46c37b;--bad:#ff6b5e;--slow:#f0b429;--acc:#6b9bff;--acc2:#b794ff;--wood:#2a2923}}
+:root[data-theme="dark"]{--bg:#15161a;--fg:#ececea;--mut:#9a9a94;--card:#202228;--line:#3a3d46;--ok:#46c37b;--bad:#ff6b5e;--slow:#f0b429;--acc:#6b9bff;--acc2:#b794ff;--wood:#2a2923}
+*{box-sizing:border-box}html,body{margin:0}
+body{background:var(--bg);color:var(--fg);font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;max-width:600px;margin:0 auto;padding:12px}
+h1{font-size:20px;margin:4px 0 10px}h2{font-size:16px;margin:14px 0 6px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:12px;margin-bottom:10px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+button{font:inherit;color:inherit;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px 12px;min-height:44px;cursor:pointer}
+button:focus-visible{outline:3px solid var(--acc);outline-offset:1px}
+button.on{background:var(--acc);color:#fff;border-color:var(--acc)}
+button.go{background:var(--acc);color:#fff;border-color:var(--acc);font-weight:600;width:100%}
+button.sm{padding:6px 10px;min-height:36px;font-size:14px}
+.tabs button{flex:1}.mut{color:var(--mut);font-size:14px}
+.hud{display:flex;justify-content:space-between;font-size:14px;color:var(--mut);margin-bottom:6px}
+#prompt{font-size:21px;font-weight:600;text-align:center;min-height:56px;margin:4px 0}
+#bw{overflow-x:auto;-webkit-overflow-scrolling:touch}
+#board{display:block;height:auto;touch-action:manipulation}
+.pad{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}
+.pad.five{grid-template-columns:repeat(5,1fr)}
+.pad button{font-size:20px;font-weight:600;padding:12px 0}.pad small{display:block;font-size:12px;font-weight:400;color:var(--mut)}
+.flash-ok{box-shadow:0 0 0 3px var(--ok)}.flash-slow{box-shadow:0 0 0 3px var(--slow)}.flash-bad{box-shadow:0 0 0 3px var(--bad)}
+#fb{text-align:center;min-height:22px;font-weight:600}
+table{border-collapse:collapse;width:100%;font-size:12px}td,th{border:1px solid var(--line);text-align:center;padding:6px 2px}
+.hide{display:none}label{display:flex;gap:8px;align-items:center;min-height:36px}
+select{font:inherit;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--fg);min-height:44px}
+</style></head><body>
+<h1>Fretboard Trainer</h1>
+<div class="row tabs"><button id="t-train" class="on">Train</button><button id="t-prog">Programs</button><button id="t-stats">Stats</button></div>
+
+<div id="v-train">
+<div id="setup" class="card">
+<h2>Quick start level</h2>
+<div class="row" id="levels"></div>
+<p class="mut" id="lvinfo"></p>
+<h2>Mode</h2>
+<div class="row" id="modes"></div>
+<h2>Strings to practise</h2>
+<div class="row" id="strs"></div>
+<p class="mut">Tap any strings on or off. One string alone is fine. 6 is the thickest string.</p>
+<h2>Frets to practise</h2>
+<div class="row">
+<label>From <select id="f1"></select></label>
+<label>To <select id="f2"></select></label>
+<label>Board <select id="nf"><option value="12">12 frets</option><option value="21">21 frets</option><option value="22">22 frets</option><option value="23">23 frets</option><option value="24">24 frets</option></select></label>
+</div>
+<div class="row" id="fpre" style="margin-top:6px"></div>
+<div id="octbox"><h2>Note and octave (for example C3)</h2>
+<select id="oct"><option value="off">Off, note name only</option><option value="some">Sometimes (about 1 in 3)</option><option value="always">Always, harder</option></select></div>
+<div id="intbox"><h2>Interval program</h2><select id="iset"></select>
+<p class="mut">Half the questions show two notes and ask for the interval. The rest give a note and an interval and ask for the note you land on.</p></div>
+<h2>Session</h2>
+<div class="row"><select id="dur"><option value="15">15 min</option><option value="30">30 min</option><option value="60">60 min</option><option value="120">120 min</option></select>
+<label><input type="checkbox" id="snd" checked> Sound</label></div>
+<label><input type="checkbox" id="weak"> Weak spots only</label>
+<label><input type="checkbox" id="pit"> Play the note’s pitch after each answer</label>
+<label><input type="checkbox" id="unl"> Unlock all quick start levels</label>
+<p class="mut" id="today"></p>
+<p class="mut">Warm-up (first 15%), drill (weighted to your weak spots, time-limited), cool-down (weakest spots only, last 10%).</p>
+<button class="go" id="start">Start session</button>
+</div>
+
+<div id="run" class="card hide">
+<div class="hud"><span id="ph">Warm-up</span><span id="clock">0:00</span><span id="sc">0 / 0</span></div>
+<div id="prompt"></div>
+<div id="bw"><svg id="board"></svg></div>
+<div id="fb"></div>
+<div class="pad" id="pad"></div>
+<div class="row" style="margin-top:10px"><button id="end" style="flex:1">End session</button></div>
+</div>
+<div id="done" class="card hide"></div>
+<div id="rest" class="card hide"><h2>Break</h2><p id="restmsg"></p><div id="restclock" style="font-size:36px;font-weight:700;text-align:center">0:00</div><button class="go" id="restgo">Start next block now</button><button id="restend" style="width:100%;margin-top:8px">End program</button></div>
+</div>
+
+<div id="v-prog" class="hide">
+<div class="card"><h2>Build a program</h2>
+<p class="mut">1. On the Train tab, choose the mode, strings and frets for one block. 2. Come back here, choose the minutes and the break, and tap Add. 3. Repeat for each block, give the program a name and tap Save.</p>
+<div class="row"><label>Minutes <select id="pmin"></select></label><label>Break after <select id="prest"></select></label></div>
+<button class="go" id="padd" style="margin-top:8px">Add a block from the Train tab settings</button>
+<div id="pdraft" style="margin-top:10px"></div>
+<div class="row" style="margin-top:8px"><input id="pname" placeholder="Program name" style="flex:1;font:inherit;padding:10px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--fg);min-height:44px"><button id="psave">Save</button></div>
+</div>
+<div class="card"><h2>Saved programs</h2><div id="plist"></div></div>
+</div>
+<div id="v-stats" class="hide">
+<div class="card"><h2>Fret speed map</h2><p class="mut">Average response in seconds. Green under 0.8, amber to 1.5, red slower or missed. Blank = not seen. Scroll sideways on long boards.</p><div id="heat" style="overflow-x:auto"></div></div>
+<div class="card"><h2>Interval speeds</h2><div id="iheat" style="overflow-x:auto"></div></div>
+<div class="card"><h2>Move progress between devices</h2><div class="row"><button id="exp">Copy progress</button><button id="imp">Import</button></div><textarea id="io" rows="3" style="width:100%;margin-top:8px;font:12px monospace;background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:8px" placeholder="Paste exported progress here, then tap Import"></textarea></div>
+<div class="card"><button id="reset">Reset all progress</button></div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const NAMES=['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'];
+const FLAT={1:'D♭',3:'E♭',6:'G♭',8:'A♭',10:'B♭'};
+const BASE=[40,45,50,55,59,64]; // sounding pitch of open strings, index 0 = 6th (low E)
+const STR_LBL=['6th (low E)','5th (A)','4th (D)','3rd (G)','2nd (B)','1st (high e)'];
+const LV_STR={1:[0,1],2:[0,1,2,3],3:[0,1,2,3,4,5]};
+const LV_NAME={1:'Level 1 · Low E and A',2:'Level 2 · Four low strings',3:'Level 3 · All strings'};
+const OFF={0:2,1:2,2:3,3:3};
+const INT=[[1,'m2','minor 2nd'],[2,'M2','major 2nd'],[3,'m3','minor 3rd'],[4,'M3','major 3rd'],[5,'P4','perfect 4th'],[6,'TT','tritone'],[7,'P5','perfect 5th'],[8,'m6','minor 6th'],[9,'M6','major 6th'],[10,'m7','minor 7th'],[11,'M7','major 7th'],[12,'P8','octave']];
+const ISETS={a:[12,5,7],b:[12,5,7,3,4,8,9],c:[12,5,7,3,4,8,9,1,2,10,11],d:[1,2,3,4,5,6,7,8,9,10,11,12],e:[3,4,8,9],f:[1,2,10,11]};
+const ILBL={a:'Step 1 · Octaves, 4ths, 5ths',b:'Step 2 · Add 3rds and 6ths',c:'Step 3 · Add 2nds and 7ths',d:'Step 4 · All intervals with tritone',e:'Only 3rds and 6ths',f:'Only 2nds and 7ths'};
+const MODES=[['A','See it, name it'],['B','Hear a name, find it'],['C','Octave pairs'],['D','Intervals']];
+const DEF={strs:[0,1],fmin:0,fmax:12,nf:12,oct:'off',iset:'a'};
+let P=null;
+let S={cells:{},hist:{1:[],2:[],3:[]},unlocked:1,level:1,mode:'A',days:{},programs:[],cfg:Object.assign({},DEF)};
+try{const r=localStorage.getItem('fbt1');if(r){const o=JSON.parse(r);S=Object.assign(S,o);S.cfg=Object.assign({},DEF,o.cfg||{});if(!['A','B','C','D'].includes(S.mode))S.mode='A'}}catch(e){}
+const save=()=>{try{localStorage.setItem('fbt1',JSON.stringify(S))}catch(e){}};
+const midi=(s,f)=>BASE[s]+f, pc=(s,f)=>midi(s,f)%12;
+const nName=n=>NAMES[n]+(FLAT[n]?'/'+FLAT[n]:'');
+const pn=m=>{const n=m%12,o=Math.floor(m/12)-1;return NAMES[n]+o+(FLAT[n]?'/'+FLAT[n]+o:'')};
+const W=k=>{const c=S.cells[k];return c?1+5*c.err+3*Math.min(c.ms/1500,2):3};
+const iLong=v=>INT.find(x=>x[0]===v)[2];
+const rnd=a=>a[Math.floor(Math.random()*a.length)];
+const sameSet=(a,b)=>a.length===b.length&&a.every(x=>b.includes(x));
+
+function cellsFor(){const c=S.cfg,a=[];c.strs.slice().sort().forEach(s=>{for(let f=c.fmin;f<=Math.min(c.fmax,c.nf);f++)a.push([s,f])});return a}
+function pairCells(){const c=S.cfg,a=[];[0,1,2,3].forEach(s=>{if(c.strs.includes(s)&&c.strs.includes(s+2))for(let f=c.fmin;f<=c.fmax;f++)if(f+OFF[s]<=c.nf)a.push([s,f])});return a}
+
+// ---------- audio
+let ac=null;
+function beep(freq,dur){if(!$('snd').checked)return;try{ac=ac||new (window.AudioContext||window.webkitAudioContext)();const o=ac.createOscillator(),g=ac.createGain();o.frequency.value=freq;g.gain.value=.08;o.connect(g);g.connect(ac.destination);o.start();o.stop(ac.currentTime+dur)}catch(e){}}
+function playNote(cur){if(!ac)return;try{const m=midi(cur[0],cur[1]),o=ac.createOscillator(),g=ac.createGain();o.frequency.value=440*Math.pow(2,(m-69)/12);g.gain.setValueAtTime(.15,ac.currentTime);g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+.7);o.connect(g);g.connect(ac.destination);o.start();o.stop(ac.currentTime+.7)}catch(e){}}
+
+// ---------- daily tracking
+const dayKey=d=>d.toLocaleDateString('en-CA');
+function logDay(ok){S.days=S.days||{};const k=dayKey(new Date());const x=S.days[k]||(S.days[k]={n:0,ok:0});x.n++;if(ok)x.ok++}
+function todayInfo(){S.days=S.days||{};const d=new Date(),t=S.days[dayKey(d)];let n=0;if(!t)d.setDate(d.getDate()-1);while(S.days[dayKey(d)]&&S.days[dayKey(d)].n>0){n++;d.setDate(d.getDate()-1)}
+  $('today').textContent='Today: '+(t?t.n:0)+' answers'+(n?', '+n+'-day streak':'')}
+
+// ---------- setup screen
+function fillFrets(){const c=S.cfg;['f1','f2'].forEach(id=>{const s=$(id);s.innerHTML='';for(let f=0;f<=c.nf;f++){const o=document.createElement('option');o.value=f;o.textContent=f===0?'0 (open)':f;s.appendChild(o)}});$('f1').value=c.fmin;$('f2').value=c.fmax;$('nf').value=c.nf}
+function drawSetup(){
+  const c=S.cfg;
+  $('levels').innerHTML='';
+  [1,2,3].forEach(l=>{const b=document.createElement('button');const ok=l<=S.unlocked||$('unl').checked;b.textContent=(ok?'':'🔒 ')+'L'+l;b.disabled=!ok;if(S.level===l)b.className='on';
+    b.onclick=()=>{S.level=l;c.strs=LV_STR[l].slice();save();drawSetup()};$('levels').appendChild(b)});
+  $('lvinfo').textContent=LV_NAME[S.level]+' sets the strings for you; change them below any time.'+(S.level===S.unlocked&&S.unlocked<3?' Next level unlocks with 30 note-naming answers at 97%+ accuracy and a median under 0.8 s on those strings, frets 0–12.':'');
+  $('modes').innerHTML='';
+  MODES.forEach(([m,t])=>{const b=document.createElement('button');b.textContent=t;if(S.mode===m)b.className='on';b.onclick=()=>{S.mode=m;save();drawSetup()};$('modes').appendChild(b)});
+  $('strs').innerHTML='';
+  for(let s=0;s<6;s++){const b=document.createElement('button');b.textContent=String(6-s);b.setAttribute('aria-label','String '+(6-s));if(c.strs.includes(s))b.className='on';
+    b.onclick=()=>{c.strs=c.strs.includes(s)?c.strs.filter(x=>x!==s):c.strs.concat([s]);save();drawSetup()};$('strs').appendChild(b)}
+  const all=document.createElement('button');all.textContent='All';all.onclick=()=>{c.strs=[0,1,2,3,4,5];save();drawSetup()};$('strs').appendChild(all);
+  fillFrets();
+  $('fpre').innerHTML='';
+  [['0–5',0,5],['5–9',5,9],['7–12',7,12],['12–24',12,24],['All',0,24]].forEach(([t,a,b])=>{const x=document.createElement('button');x.className='sm';x.textContent=t;
+    x.onclick=()=>{c.fmin=Math.min(a,c.nf);c.fmax=Math.min(b,c.nf);save();drawSetup()};$('fpre').appendChild(x)});
+  $('oct').value=c.oct;$('iset').value=c.iset;
+  $('octbox').classList.toggle('hide',!(S.mode==='A'||S.mode==='B'));
+  $('intbox').classList.toggle('hide',S.mode!=='D');
+  todayInfo();
+}
+$('iset').innerHTML=Object.keys(ILBL).map(k=>'<option value="'+k+'">'+ILBL[k]+'</option>').join('');
+$('f1').onchange=()=>{const c=S.cfg;c.fmin=+$('f1').value;if(c.fmax<c.fmin)c.fmax=c.fmin;save();drawSetup()};
+$('f2').onchange=()=>{const c=S.cfg;c.fmax=+$('f2').value;if(c.fmin>c.fmax)c.fmin=c.fmax;save();drawSetup()};
+$('nf').onchange=()=>{const c=S.cfg;c.nf=+$('nf').value;c.fmax=Math.min(c.fmax,c.nf);c.fmin=Math.min(c.fmin,c.fmax);save();drawSetup()};
+$('oct').onchange=()=>{S.cfg.oct=$('oct').value;save()};
+$('iset').onchange=()=>{S.cfg.iset=$('iset').value;save()};
+$('unl').onchange=drawSetup;
+function showTab(t){$('v-train').classList.toggle('hide',t!=='train');$('v-stats').classList.toggle('hide',t!=='stats');$('v-prog').classList.toggle('hide',t!=='prog');$('t-prog').className=t==='prog'?'on':'';if(t==='prog')drawProg();
+  $('t-train').className=t==='train'?'on':'';$('t-stats').className=t==='stats'?'on':'';if(t==='stats')heat()}
+$('t-train').onclick=()=>showTab('train');$('t-prog').onclick=()=>showTab('prog');$('t-stats').onclick=()=>showTab('stats');
+
+// ---------- board drawing
+function drawBoard(o){
+  o=o||{};const c=S.cfg,NF=c.nf,FW=NF>12?26:24,X0=24,Y0=14,SG=22,Wd=X0+NF*FW+10;
+  const px=f=>f===0?X0-12:X0+f*FW-FW/2,py=s=>Y0+(5-s)*SG;
+  let h='<rect x="'+X0+'" y="'+(Y0-6)+'" width="'+(NF*FW)+'" height="'+(SG*5+12)+'" fill="var(--wood)"/>';
+  const f1=c.fmin,f2=Math.min(c.fmax,NF),bx=f1===0?0:X0+(f1-1)*FW;
+  h+='<rect x="'+bx+'" y="'+(Y0-6)+'" width="'+(X0+f2*FW-bx)+'" height="'+(SG*5+12)+'" fill="var(--acc)" opacity=".10"/>';
+  for(let f=0;f<=NF;f++)h+='<line x1="'+(X0+f*FW)+'" y1="'+(Y0-6)+'" x2="'+(X0+f*FW)+'" y2="'+(Y0+SG*5+6)+'" stroke="var(--mut)" stroke-width="'+(f===0?4:1.2)+'"/>';
+  [3,5,7,9,15,17,19,21].forEach(f=>{if(f<=NF)h+='<circle cx="'+px(f)+'" cy="'+(Y0+SG*2.5)+'" r="6" fill="var(--mut)" opacity=".6"/>'});
+  [12,24].forEach(f=>{if(f<=NF)h+='<circle cx="'+px(f)+'" cy="'+(Y0+SG*1.5)+'" r="6" fill="var(--mut)" opacity=".6"/><circle cx="'+px(f)+'" cy="'+(Y0+SG*3.5)+'" r="6" fill="var(--mut)" opacity=".6"/>'});
+  const TH=[2.8,2.3,1.9,1.4,1.1,.9];
+  for(let s=0;s<6;s++)h+='<line x1="'+X0+'" y1="'+py(s)+'" x2="'+(X0+NF*FW)+'" y2="'+py(s)+'" stroke="var(--fg)" stroke-width="'+TH[s]+'" opacity="'+(c.strs.includes(s)?.95:.3)+'"/>';
+  const MK=[3,5,7,9,12,15,17,19,21,24];
+  for(let f=1;f<=NF;f++){const m=MK.includes(f);h+='<text x="'+px(f)+'" y="'+(Y0+SG*5+25)+'" text-anchor="middle" font-size="11" font-weight="'+(m?700:400)+'" fill="'+(m?'var(--fg)':'var(--mut)')+'">'+f+'</text>'}
+  if(o.tapS!=null)for(let f=0;f<=NF;f++)h+='<rect data-f="'+f+'" x="'+(px(f)-FW/2)+'" y="'+(py(o.tapS)-SG/2)+'" width="'+FW+'" height="'+SG+'" fill="var(--acc)" opacity=".14" style="cursor:pointer"/>';
+  (o.dots||[]).forEach(([s,f,col,lbl])=>{h+='<circle cx="'+px(f)+'" cy="'+py(s)+'" r="9" fill="'+col+'"/>';if(lbl)h+='<text x="'+px(f)+'" y="'+py(s)+'" dy=".35em" text-anchor="middle" font-size="11" font-weight="700" fill="#fff">'+lbl+'</text>'});
+  const b=$('board');b.setAttribute('viewBox','0 0 '+Wd+' 158');b.style.width=NF>12?Wd+'px':'100%';b.innerHTML=h;
+  if(o.tapS!=null)b.querySelectorAll('rect[data-f]').forEach(r=>r.onclick=()=>o.onTap(+r.dataset.f));
+  const w=$('bw');w.scrollLeft=NF>12?Math.max(0,px(o.focus!=null?o.focus:f1)-w.clientWidth/2):0;
+}
+
+// ---------- answer pads
+function setPad(kind){const p=$('pad');p.innerHTML='';p.className='pad';R.padKind=kind;
+  if(kind==='note')for(let n=0;n<12;n++){const b=document.createElement('button');b.innerHTML=NAMES[n]+(FLAT[n]?'<small>'+FLAT[n]+'</small>':'<small>&nbsp;</small>');b.onclick=()=>padClick('note',n);p.appendChild(b)}
+  else if(kind==='octave'){p.className='pad five';[2,3,4,5,6].forEach(o=>{const b=document.createElement('button');b.innerHTML=o+'<small>octave</small>';b.onclick=()=>padClick('octave',o);p.appendChild(b)})}
+  else if(kind==='interval')INT.forEach(([v,sh,lg])=>{const b=document.createElement('button');b.innerHTML=sh+'<small>'+lg+'</small>';b.onclick=()=>padClick('interval',v);p.appendChild(b)})}
+
+// ---------- engine
+let R=null;
+function pick(p,kf,wf){let tot=0;const w=p.map(x=>{let v=wf(x);if(R.lastKey&&kf(x)===R.lastKey&&p.length>1)v=0;tot+=v;return v});let r=Math.random()*tot;for(let i=0;i<p.length;i++){r-=w[i];if(r<=0)return p[i]}return p[p.length-1]}
+function phase(){if(P)return'drill';const p=(Date.now()-R.t0)/R.total;return p<.15?'warm':p>.9?'cool':'drill'}
+function armTimer(ms){R.limit=ms;clearTimeout(R.to);if(R.ph!=='warm')R.to=setTimeout(()=>grade(false,true),ms)}
+function next(){
+  if(!R)return;if(Date.now()-R.t0>=R.total)return finish();
+  const ph=phase();R.ph=ph;$('ph').textContent=P?'Block '+(P.i+1)+' of '+P.blocks.length:{warm:'Warm-up',drill:'Drill',cool:'Cool-down'}[ph];
+  R.locked=false;$('fb').textContent='';$('run').className='card';R.tStart=performance.now();R.askOct=false;
+  const m=S.mode,c=S.cfg;
+  if(m==='D')return nextD();
+  const all=m==='C'?pairCells():cellsFor(),pre=m==='C'?'o':'',kf=([s,f])=>pre+s+'-'+f,wf=x=>W(kf(x));
+  let t;
+  if(ph==='warm'&&!R.weak)t=rnd(all);
+  else{const p=(ph==='cool'||R.weak)?all.slice().sort((a,b)=>wf(b)-wf(a)).slice(0,12):all;t=pick(p,kf,wf)}
+  R.cur=t;R.key=kf(t);const[s,f]=t;
+  if(m==='A'||m==='B')R.askOct=c.oct==='always'||(c.oct==='some'&&Math.random()<.3);
+  if(m==='A'){$('prompt').textContent=R.askOct?'Name this note and its octave':'Name this note';drawBoard({dots:[[s,f,'var(--acc)']],focus:f});setPad('note');armTimer(R.askOct?4000:2500)}
+  else if(m==='B'){$('prompt').textContent=(R.askOct?pn(midi(s,f)):nName(pc(s,f)))+' on the '+STR_LBL[s]+' string';drawBoard({tapS:s,onTap:answerB});setPad('none');armTimer(6000)}
+  else{R.dir=Math.random()<.5?'up':'down';const hs=s+2,up=R.dir==='up';
+    $('prompt').textContent=up?'Tap the octave on the '+STR_LBL[hs].split(' ')[0]+' string':'Tap the root on the '+STR_LBL[s].split(' ')[0]+' string';
+    drawPair(false);setPad('none');armTimer(6000)}
+}
+function drawPair(reveal){
+  const[s,rf]=R.cur,hs=s+2,hf=rf+OFF[s],up=R.dir==='up';
+  const ts=up?hs:s,tf=up?hf:rf,ss=up?s:hs,sf=up?rf:hf;
+  const dots=[[ss,sf,'var(--acc)']];if(reveal)dots.push([ts,tf,'var(--ok)']);
+  drawBoard({dots:dots,tapS:reveal?null:ts,onTap:answerC,focus:sf});
+}
+function nextD(){
+  const c=S.cfg,cells=cellsFor();let set=ISETS[c.iset].slice();
+  if(R.ph==='cool'||R.weak)set=set.sort((a,b)=>W('i'+b)-W('i'+a)).slice(0,Math.min(6,set.length));
+  const ik=v=>'i'+v,iw=v=>W('i'+v);
+  let v=Math.random()<.5?1:2,root=null,sec=null,semi=0;
+  if(v===1){for(let i=0;i<40&&!sec;i++){root=rnd(cells);semi=pick(set,ik,iw);const cand=cells.filter(([s,f])=>midi(s,f)===midi(root[0],root[1])+semi);if(cand.length)sec=rnd(cand)}
+    if(!sec)v=2}
+  if(v===2){root=rnd(cells);semi=pick(set,ik,iw)}
+  R.v=v;R.cur=root;R.semi=semi;R.sec=sec;R.key='i'+semi;R.target=(pc(root[0],root[1])+semi)%12;
+  if(v===1){$('prompt').textContent='Name the interval between 1 and 2';drawBoard({dots:[[root[0],root[1],'var(--acc)','1'],[sec[0],sec[1],'var(--acc2)','2']],focus:root[1]});setPad('interval');armTimer(5000)}
+  else{const l=iLong(semi);$('prompt').textContent=l.charAt(0).toUpperCase()+l.slice(1)+' above this note';drawBoard({dots:[[root[0],root[1],'var(--acc)']],focus:root[1]});setPad('note');armTimer(3500)}
+}
+function answerText(){const m=S.mode,[s,f]=R.cur;
+  if(m==='A'||m==='B')return R.askOct?pn(midi(s,f)):nName(pc(s,f));
+  if(m==='C')return 'root '+nName(pc(s,f));
+  return R.v===1?iLong(R.semi):nName(R.target)}
+function padClick(kind,v){
+  if(!R||R.locked)return;const m=S.mode;
+  if(kind==='note'){
+    if(m==='D'){grade(v===R.target,false);return}
+    const ok=v===pc(R.cur[0],R.cur[1]);
+    if(R.askOct){if(!ok){grade(false,false);return}$('prompt').textContent=nName(v)+', which octave?';setPad('octave');return}
+    grade(ok,false)}
+  else if(kind==='octave')grade(Math.floor(midi(R.cur[0],R.cur[1])/12)-1===v,false);
+  else if(kind==='interval')grade(v===R.semi,false)}
+function answerB(f){if(!R||R.locked)return;const[s,tf]=R.cur;grade(R.askOct?midi(s,f)===midi(s,tf):pc(s,f)===pc(s,tf),false)}
+function answerC(f){if(!R||R.locked)return;const[s,rf]=R.cur,up=R.dir==='up';const ts=up?s+2:s,tf=up?rf+OFF[s]:rf;grade(pc(ts,f)===pc(ts,tf),false)}
+function grade(ok,timeout){
+  if(R.locked)return;R.locked=true;clearTimeout(R.to);
+  const ms=Math.round(performance.now()-R.tStart),m=S.mode;
+  const fast=m==='A'?(R.askOct?1500:800):2500;
+  const slow=ok&&ms>fast&&R.ph!=='warm',good=ok&&!slow,k=R.key;
+  const c=S.cells[k]||(S.cells[k]={ms:ms,err:ok?0:1,n:0});
+  c.ms=Math.round(c.n?c.ms*.6+ms*.4:ms);c.err=c.n?c.err*.6+(ok?0:1)*.4:(ok?0:1);c.n++;if(slow)c.err=Math.max(c.err,.3);
+  if(m==='A'&&R.official&&!R.askOct){const h=S.hist[R.level];h.push({ok:ok?1:0,ms:ms});if(h.length>60)h.shift()}
+  R.n++;if(ok){R.ok++;R.times.push(ms)}logDay(ok);$('sc').textContent=R.ok+' / '+R.n;
+  if(good){$('fb').style.color='var(--ok)';$('fb').textContent=ms+' ms';beep(880,.08);$('run').className='card flash-ok'}
+  else if(slow){$('fb').style.color='var(--slow)';$('fb').textContent='Correct but slow: '+ms+' ms';beep(440,.12);$('run').className='card flash-slow'}
+  else{$('fb').style.color='var(--bad)';$('fb').textContent=(timeout?'Too slow. ':'Miss. ')+'Answer: '+answerText();beep(160,.25);try{navigator.vibrate&&navigator.vibrate(120)}catch(e){}$('run').className='card flash-bad'}
+  const[s,f]=R.cur;
+  if(m==='B')drawBoard({dots:[[s,f,'var(--ok)']],focus:f});
+  if(m==='C')drawPair(true);
+  if(m==='D'&&R.v===1)drawBoard({dots:[[s,f,'var(--ok)','1'],[R.sec[0],R.sec[1],'var(--ok)','2']],focus:f});
+  if($('pit').checked){const cc=R.cur;setTimeout(()=>playNote(cc),150)}
+  checkUnlock();save();R.lastKey=k;
+  setTimeout(next,good?250:1200);
+}
+function checkUnlock(){if(S.mode!=='A'||!R.official||R.level!==S.unlocked||S.unlocked>=3)return;const h=S.hist[R.level];if(h.length<30)return;
+  const l=h.slice(-30),acc=l.reduce((a,x)=>a+x.ok,0)/30,t=l.filter(x=>x.ok).map(x=>x.ms).sort((a,b)=>a-b),med=t.length?t[Math.floor(t.length/2)]:9999;
+  if(acc>=.97&&med<800){S.unlocked++;R.unlockMsg='Level '+S.unlocked+' unlocked.'}}
+function weakList(){const m=S.mode;
+  if(m==='D')return ISETS[S.cfg.iset].filter(v=>S.cells['i'+v]).sort((a,b)=>W('i'+b)-W('i'+a)).slice(0,6).map(v=>iLong(v)+' ('+(S.cells['i'+v].ms/1000).toFixed(1)+' s)');
+  const pre=m==='C'?'o':'',base=m==='C'?pairCells():cellsFor();
+  return base.filter(([s,f])=>S.cells[pre+s+'-'+f]).sort((a,b)=>W(pre+b[0]+'-'+b[1])-W(pre+a[0]+'-'+a[1])).slice(0,6).map(([s,f])=>'String '+(6-s)+', fret '+f+' ('+NAMES[pc(s,f)]+', '+(S.cells[pre+s+'-'+f].ms/1000).toFixed(1)+' s)')}
+function finish(){
+  if(P)return finishBlock();clearTimeout(R.to);const t=R.times.slice().sort((a,b)=>a-b),med=t.length?t[Math.floor(t.length/2)]:0,weak=weakList();
+  $('run').classList.add('hide');$('done').classList.remove('hide');
+  $('done').innerHTML='<h2>Session complete</h2><p>'+R.ok+' correct of '+R.n+(R.n?' ('+Math.round(100*R.ok/R.n)+'%)':'')+'. Median '+(med||'–')+' ms.</p>'+(R.unlockMsg?'<p><b>'+R.unlockMsg+'</b></p>':'')+
+   '<h2>Weakest spots</h2><p>'+(weak.length?weak.join('<br>'):'None yet.')+'</p><button class="go" id="again">Back to setup</button>';
+  $('again').onclick=()=>{$('done').classList.add('hide');$('setup').classList.remove('hide');drawSetup()};
+  clearInterval(R.iv);try{R.wl&&R.wl.release()}catch(e){}R=null;save();
+}
+function validate(){const c=S.cfg;
+  if(!c.strs.length)return'Pick at least one string.';
+  if(c.fmin>c.fmax)return'The “From” fret must not be higher than the “To” fret.';
+  if(S.mode==='C'&&!pairCells().length)return'Octave pairs need two strings that are two apart, such as 6 and 4, or 5 and 3, with room on the fretboard.';
+  if(!cellsFor().length)return'No frets selected.';return''}
+$('start').onclick=()=>{startSession((+$('dur').value)*60000)};
+function startSession(total){
+  const err=validate();if(err){alert(err);return}
+  const c=S.cfg;
+  R={level:S.level,total:total,t0:Date.now(),n:0,ok:0,times:[],weak:$('weak').checked&&!P,lastKey:null,locked:true,padKind:'none',
+     official:!P&&S.mode==='A'&&c.fmin===0&&c.fmax===12&&sameSet(c.strs,LV_STR[S.level])};
+  $('setup').classList.add('hide');$('done').classList.add('hide');$('run').classList.remove('hide');$('sc').textContent='0 / 0';
+  try{ac=ac||new (window.AudioContext||window.webkitAudioContext)()}catch(e){}
+  try{navigator.wakeLock&&navigator.wakeLock.request('screen').then(w=>{if(R)R.wl=w}).catch(()=>{})}catch(e){}
+  R.iv=setInterval(()=>{if(!R)return;const r=Math.max(0,R.total-(Date.now()-R.t0));$('clock').textContent=Math.floor(r/60000)+':'+String(Math.floor(r/1000)%60).padStart(2,'0')},500);
+  next();
+};
+$('end').onclick=()=>{if(R){if(P)P.stop=true;finish()}};
+document.addEventListener('keydown',e=>{if(!R||R.padKind!=='note'||e.ctrlKey||e.metaKey||e.altKey||e.key.length!==1)return;const i='cdefgab'.indexOf(e.key.toLowerCase());if(i<0)return;padClick('note',([0,2,4,5,7,9,11][i]+(e.shiftKey?1:0))%12)});
+
+// ---------- programs
+let DR=[];
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+$('pmin').innerHTML=[1,2,3,4,5,6,8,10,15,20,30].map(m=>'<option value="'+m+'">'+m+' min</option>').join('');$('pmin').value=3;
+$('prest').innerHTML=[0,15,30,45,60,90,120].map(s=>'<option value="'+s+'">'+(s?s+' s':'none')+'</option>').join('');$('prest').value=30;
+function bsum(b){const st=b.strs.slice().sort().map(s=>6-s).join(', ');const md={A:'Name the note',B:'Find the note',C:'Octave pairs',D:'Intervals'}[b.mode];
+  return md+' · string'+(b.strs.length>1?'s ':' ')+st+' · frets '+b.fmin+'–'+b.fmax+((b.mode==='A'||b.mode==='B')&&b.oct!=='off'?' · with octave':'')+(b.mode==='D'?' · '+ILBL[b.iset]:'')+' · '+b.mins+' min'+(b.rest?' + '+b.rest+' s break':'')}
+const ptot=bl=>Math.round(bl.reduce((a,b)=>a+b.mins+b.rest/60,0));
+function drawProg(){
+  $('pdraft').innerHTML=DR.length?DR.map((b,i)=>'<div class="card" style="margin:0 0 6px"><b>'+(i+1)+'.</b> '+bsum(b)+'<div class="row" style="margin-top:6px"><button class="sm" data-a="up" data-i="'+i+'">▲</button><button class="sm" data-a="dn" data-i="'+i+'">▼</button><button class="sm" data-a="rm" data-i="'+i+'">Remove</button></div></div>').join('')+'<p class="mut">About '+ptot(DR)+' minutes in total.</p>':'<p class="mut">No blocks yet.</p>';
+  $('pdraft').querySelectorAll('button').forEach(b=>b.onclick=()=>{const i=+b.dataset.i,a=b.dataset.a;
+    if(a==='rm')DR.splice(i,1);else if(a==='up'&&i>0){const t=DR[i-1];DR[i-1]=DR[i];DR[i]=t}else if(a==='dn'&&i<DR.length-1){const t=DR[i+1];DR[i+1]=DR[i];DR[i]=t}drawProg()});
+  $('plist').innerHTML=S.programs.length?S.programs.map((p,i)=>'<div class="card" style="margin:0 0 6px"><b>'+esc(p.name)+'</b><div class="mut">'+p.blocks.length+' blocks, about '+ptot(p.blocks)+' min</div><div class="row" style="margin-top:6px"><button class="sm on" data-a="run" data-p="'+i+'">Run</button><button class="sm" data-a="edit" data-p="'+i+'">Edit</button><button class="sm" data-a="del" data-p="'+i+'">Delete</button></div></div>').join(''):'<p class="mut">No saved programs yet.</p><button class="sm" id="pex">Add an example program</button>';
+  $('plist').querySelectorAll('button[data-a]').forEach(b=>b.onclick=()=>{const i=+b.dataset.p,a=b.dataset.a,p=S.programs[i];
+    if(a==='run')runProgram(p);
+    else if(a==='edit'){DR=JSON.parse(JSON.stringify(p.blocks));$('pname').value=p.name;drawProg()}
+    else if(a==='del'&&confirm('Delete this program?')){S.programs.splice(i,1);save();drawProg()}});
+  const ex=$('pex');if(ex)ex.onclick=()=>{const m=(strs,a,b,mins,rest)=>({mode:'A',strs:strs,fmin:a,fmax:b,nf:12,oct:'off',iset:'a',mins:mins,rest:rest});
+    S.programs.push({name:'Example: low E and A',blocks:[m([0],0,5,2,30),m([1],0,5,2,30),m([0,1],0,12,3,0)]});save();drawProg()}
+}
+$('padd').onclick=()=>{const err=validate();if(err){alert(err);return}const c=S.cfg;
+  DR.push({mode:S.mode,strs:c.strs.slice(),fmin:c.fmin,fmax:c.fmax,nf:c.nf,oct:c.oct,iset:c.iset,mins:+$('pmin').value,rest:+$('prest').value});drawProg()};
+$('psave').onclick=()=>{if(!DR.length){alert('Add at least one block first.');return}
+  const n=$('pname').value.trim()||('Program '+(S.programs.length+1)),blocks=JSON.parse(JSON.stringify(DR)),i=S.programs.findIndex(p=>p.name===n);
+  if(i>=0)S.programs[i]={name:n,blocks:blocks};else S.programs.push({name:n,blocks:blocks});save();drawProg()};
+function applyBlock(b){S.mode=b.mode;Object.assign(S.cfg,{strs:b.strs.slice(),fmin:b.fmin,fmax:b.fmax,nf:b.nf||S.cfg.nf,oct:b.oct,iset:b.iset})}
+function runProgram(p){if(R||P||!p.blocks.length)return;
+  P={name:p.name,blocks:p.blocks,i:0,res:[],orig:{mode:S.mode,cfg:JSON.parse(JSON.stringify(S.cfg))}};
+  showTab('train');applyBlock(P.blocks[0]);startSession(P.blocks[0].mins*60000);if(!R)endProgram(true)}
+function finishBlock(){
+  clearTimeout(R.to);const t=R.times.slice().sort((a,b)=>a-b);
+  P.res.push({n:R.n,ok:R.ok,med:t.length?t[Math.floor(t.length/2)]:0});
+  clearInterval(R.iv);try{R.wl&&R.wl.release()}catch(e){}R=null;save();
+  $('run').classList.add('hide');
+  if(P.stop||P.i>=P.blocks.length-1)return endProgram();
+  const rs=P.blocks[P.i].rest;if(!rs)return nextBlock();startRest(rs)}
+function startRest(rs){
+  $('rest').classList.remove('hide');$('restmsg').textContent='Next: '+bsum(P.blocks[P.i+1]);
+  let left=rs;const draw=()=>{$('restclock').textContent=Math.floor(left/60)+':'+String(left%60).padStart(2,'0')};draw();
+  P.rt=setInterval(()=>{left--;draw();if(left<=0)nextBlock()},1000);
+  $('restgo').onclick=nextBlock;$('restend').onclick=()=>{if(P)endProgram()}}
+function nextBlock(){
+  if(!P||R)return;clearInterval(P.rt);$('rest').classList.add('hide');P.i++;
+  applyBlock(P.blocks[P.i]);startSession(P.blocks[P.i].mins*60000);if(!R)endProgram()}
+function endProgram(failed){
+  const p=P;clearInterval(p.rt);S.mode=p.orig.mode;S.cfg=Object.assign({},DEF,p.orig.cfg);P=null;save();
+  $('rest').classList.add('hide');$('run').classList.add('hide');
+  if(failed){$('setup').classList.remove('hide');drawSetup();return}
+  $('setup').classList.add('hide');$('done').classList.remove('hide');
+  let h='<h2>Program complete: '+esc(p.name)+'</h2>';
+  p.res.forEach((r,i)=>{h+='<p><b>Block '+(i+1)+'</b> · '+bsum(p.blocks[i])+'<br>'+r.ok+' correct of '+r.n+(r.n?' ('+Math.round(100*r.ok/r.n)+'%)':'')+', median '+(r.med||'–')+' ms</p>'});
+  $('done').innerHTML=h+'<button class="go" id="again">Back to setup</button>';
+  $('again').onclick=()=>{$('done').classList.add('hide');$('setup').classList.remove('hide');drawSetup()}}
+
+// ---------- stats
+function heat(){
+  let mx=S.cfg.nf;Object.keys(S.cells).forEach(k=>{const m=/^(\d)-(\d+)$/.exec(k);if(m)mx=Math.max(mx,+m[2])});
+  let h='<table style="min-width:'+((mx+2)*30)+'px"><tr><th></th>';for(let f=0;f<=mx;f++)h+='<th>'+f+'</th>';h+='</tr>';
+  for(let s=0;s<6;s++){h+='<tr><th>'+(6-s)+'</th>';
+    for(let f=0;f<=mx;f++){const c=S.cells[s+'-'+f];let bg='transparent',t='';
+      if(c){t=(c.ms/1000).toFixed(1);bg=c.err>.4?'var(--bad)':c.ms<800?'var(--ok)':c.ms<1500?'var(--slow)':'var(--bad)'}
+      h+='<td style="background:'+bg+';color:'+(c?'#fff':'inherit')+'">'+t+'</td>'}
+    h+='</tr>'}
+  $('heat').innerHTML=h+'</table>';
+  let i='<table style="min-width:420px"><tr>'+INT.map(x=>'<th>'+x[1]+'</th>').join('')+'</tr><tr>'+INT.map(x=>{const c=S.cells['i'+x[0]];if(!c)return'<td></td>';const bg=c.err>.4?'var(--bad)':c.ms<1500?'var(--ok)':c.ms<2500?'var(--slow)':'var(--bad)';return'<td style="background:'+bg+';color:#fff">'+(c.ms/1000).toFixed(1)+'</td>'}).join('')+'</tr></table>';
+  $('iheat').innerHTML=i}
+$('reset').onclick=()=>{if(confirm('Erase all progress? Saved programs are kept.')){S={cells:{},hist:{1:[],2:[],3:[]},unlocked:1,level:1,mode:'A',days:{},programs:S.programs||[],cfg:Object.assign({},DEF)};save();drawSetup();heat()}};
+$('exp').onclick=()=>{const j=JSON.stringify(S);$('io').value=j;try{navigator.clipboard.writeText(j)}catch(e){}};
+$('imp').onclick=()=>{try{const o=JSON.parse($('io').value);if(!o||!o.cells||!o.hist)throw 0;S=Object.assign(S,o);S.cfg=Object.assign({},DEF,o.cfg||{});save();drawSetup();heat()}catch(e){alert('That is not valid exported progress.')}};
+drawSetup();
+</script></body></html>
